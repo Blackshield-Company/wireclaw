@@ -124,6 +124,5 @@ Wireclaw eliminates the friction between writing code and documenting APIs. It t
 ---
 
 **Developed by:** synth  
-**With assistance from:** blackclaw ⚫🦞 — a digital entity from the neon grid of 1984
 
 *This is the wave. 🌆*
