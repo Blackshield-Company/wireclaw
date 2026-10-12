@@ -16,6 +16,7 @@ mod replay;
 mod scripts;
 mod search;
 mod stats;
+mod tls;
 mod tui;
 mod websocket;
 
@@ -52,7 +53,7 @@ struct ReplayArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Install rustls crypto provider (required for rustls 0.23+)
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    let _ = rustls::crypto::ring::default_provider().install_default();
 
     let cli = cli::Cli::parse();
     let config = config::load_config(&cli.config)?;

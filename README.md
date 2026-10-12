@@ -11,7 +11,7 @@
 
 Wireclaw is a local HTTP/HTTPS proxy that captures every API request and response, stores them in SQLite, and gives you a real-time web dashboard, terminal UI, and one-click OpenAPI export. No code changes. No SDKs. No manual documentation.
 
-**Built with Rust. Zero `unsafe`. Zero config.**
+**Built with Rust. No `unsafe` in wireclaw's own code. Zero config.**
 
 ---
 
@@ -47,10 +47,25 @@ Point your HTTP client at the proxy. Ship your code. Browse the dashboard. Expor
 
 ## Quick Start
 
+### Install a Prebuilt Binary
+
+```bash
+# Linux / macOS (x86_64 and arm64): verifies the SHA-256 checksum
+curl -fsSL https://raw.githubusercontent.com/Blackshield-Company/wireclaw/main/install.sh | bash
+```
+
+Or download an archive for your platform from
+[Releases](https://github.com/Blackshield-Company/wireclaw/releases) (Linux x86_64/aarch64,
+macOS x86_64/arm64, Windows x86_64) and check it against `SHA256SUMS`:
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing   # macOS: shasum -a 256 -c SHA256SUMS --ignore-missing
+```
+
 ### Install from Source
 
 ```bash
-git clone https://github.com/synthalorian/wireclaw.git
+git clone https://github.com/Blackshield-Company/wireclaw.git
 cd wireclaw
 cargo install --path .
 ```
@@ -61,12 +76,83 @@ cargo install --path .
 # Start proxy + dashboard
 wireclaw capture --session my-api --dashboard
 
-# Point your client at the proxy
-export HTTP_PROXY=http://127.0.0.1:8080
+# Point your client at the proxy (HTTPS needs the CA installed, see below)
+export HTTP_PROXY=http://127.0.0.1:8080 HTTPS_PROXY=http://127.0.0.1:8080
 curl https://api.example.com/users
 
 # Open the dashboard
 # → http://localhost:8746
+```
+
+### HTTPS Interception: Trust the wireclaw CA
+
+To read HTTPS traffic, wireclaw terminates TLS with a per-host certificate signed by
+its own local certificate authority. Generate the CA once, then tell your OS or client
+to trust it:
+
+```bash
+wireclaw ca generate   # prints the PEM and the path of ca.crt
+```
+
+The CA lives in `<data dir>/certs/` (`ca.crt` public, `ca.key` private, mode `0600` on Unix):
+
+| OS | Default data dir |
+|----|------------------|
+| Linux | `~/.local/share/wireclaw` |
+| macOS | `~/Library/Application Support/wireclaw` |
+| Windows | `%APPDATA%\wireclaw` |
+
+Set `WIRECLAW_DATA_DIR` to override it.
+
+**Linux (Debian/Ubuntu)**
+```bash
+sudo cp ~/.local/share/wireclaw/certs/ca.crt /usr/local/share/ca-certificates/wireclaw.crt
+sudo update-ca-certificates
+```
+
+**Linux (Fedora/RHEL/Arch)**
+```bash
+sudo cp ~/.local/share/wireclaw/certs/ca.crt /etc/pki/ca-trust/source/anchors/wireclaw.crt   # Arch: sudo trust anchor ca.crt
+sudo update-ca-trust
+```
+
+**macOS**
+```bash
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain \
+  "$HOME/Library/Application Support/wireclaw/certs/ca.crt"
+```
+
+**Windows (PowerShell as Administrator)**
+```powershell
+Import-Certificate -FilePath "$env:APPDATA\wireclaw\certs\ca.crt" -CertStoreLocation Cert:\LocalMachine\Root
+# or, without admin, for the current user only:
+certutil -user -addstore Root "%APPDATA%\wireclaw\certs\ca.crt"
+```
+
+**Firefox** uses its own store: Settings → Privacy & Security → Certificates → View
+Certificates → Authorities → Import (or set `security.enterprise_roots.enabled` to `true`).
+
+**Per tool, no system change:** `curl --cacert <data dir>/certs/ca.crt ...`,
+`NODE_EXTRA_CA_CERTS=<path>`, `REQUESTS_CA_BUNDLE=<path>` (Python requests),
+`SSL_CERT_FILE=<path>` (many OpenSSL-based tools).
+
+**Upstreams with a private CA:** wireclaw verifies upstream servers against the OS trust
+store. To also trust an internal CA (or a local self-signed dev server), point
+`WIRECLAW_UPSTREAM_CA` at a PEM file (several files: separate with `:` on Unix, `;` on
+Windows). Untrusted upstreams are rejected with `502`.
+
+> ⚠️ Anyone holding `ca.key` can impersonate any site to a machine that trusts this CA.
+> Keep it private, and remove the CA from your trust store when you're done
+> (`sudo rm /usr/local/share/ca-certificates/wireclaw.crt && sudo update-ca-certificates --fresh`,
+> `sudo security delete-certificate -c "Wireclaw Proxy CA" /Library/Keychains/System.keychain`,
+> or `certutil -delstore Root "Wireclaw Proxy CA"`).
+
+### Export (HAR, curl, Postman, raw)
+
+```bash
+wireclaw export --format har --session my-api --output my-api.har   # HAR 1.2, opens in browser devtools
+wireclaw export --format curl --session my-api
 ```
 
 ### Generate OpenAPI from Live Traffic
@@ -144,8 +230,8 @@ The demo script starts a proxy, generates sample API traffic, and opens the dash
 
 ## Technical Highlights
 
-- **34,000+ lines of Rust** — zero `unsafe` blocks
-- **53 unit tests** — all passing
+- **~9,000 lines of Rust** — no `unsafe` blocks in wireclaw's own code
+- **53 unit tests + end-to-end tests** — capture, replay and HTTPS MITM against local HTTP/HTTPS servers, on Linux, macOS and Windows CI
 - **SQLite + sqlx** — type-safe async database operations
 - **HTTPS MITM** — auto-generated per-host certificates via `rcgen`
 - **Lua scripting** — hooks for request/response transformation
@@ -186,7 +272,8 @@ max_redirects = 10
 | Path | Purpose |
 |------|---------|
 | `~/.config/wireclaw/config.toml` | Configuration file |
-| `~/.local/share/wireclaw/sessions/<name>.db` | Per-session SQLite database |
+| `<data dir>/sessions/<name>.db` | Per-session SQLite database |
+| `<data dir>/certs/ca.crt`, `ca.key` | Local CA for HTTPS interception |
 
 Each session gets its own SQLite database with indexed tables for requests, responses, and session metadata.
 
@@ -202,11 +289,17 @@ cargo build
 cargo test
 
 # Lint
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 
 # Format
 cargo fmt
 ```
+
+---
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for how to report vulnerabilities and for the CA key threat model.
 
 ---
 

@@ -193,10 +193,13 @@ impl CertManager {
         let mut params = CertificateParams::new(vec![host.to_string()])
             .with_context(|| format!("creating cert params for host {host}"))?;
         params.distinguished_name = dn;
-        params.subject_alt_names =
-            vec![SanType::DnsName(host.try_into().map_err(|e| {
-                anyhow::anyhow!("invalid hostname for SAN: {e:?}")
-            })?)];
+        params.subject_alt_names = vec![match host.parse::<std::net::IpAddr>() {
+            Ok(ip) => SanType::IpAddress(ip),
+            Err(_) => SanType::DnsName(
+                host.try_into()
+                    .map_err(|e| anyhow::anyhow!("invalid hostname for SAN: {e:?}"))?,
+            ),
+        }];
 
         let issuer = Issuer::new(self.ca_params.clone(), &self.ca_key);
 
