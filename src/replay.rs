@@ -333,13 +333,7 @@ fn get_https_client() -> &'static Client<
         >,
     > = std::sync::OnceLock::new();
     CLIENT.get_or_init(|| {
-        let https = hyper_rustls::HttpsConnectorBuilder::new()
-            .with_native_roots()
-            .expect("no native root CA certificates found")
-            .https_or_http()
-            .enable_http1()
-            .enable_http2()
-            .build();
+        let https = crate::tls::https_or_http_connector();
         Client::builder(hyper_util::rt::TokioExecutor::new()).build::<_, BoxBody>(https)
     })
 }

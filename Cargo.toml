@@ -1,10 +1,10 @@
 [package]
 name = "wireclaw"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 description = "Local HTTP proxy that captures, stores, replays, and inspects API traffic — terminal-native and zero-config"
 license = "Apache-2.0"
-repository = "https://github.com/synthalorian/wireclaw"
+repository = "https://github.com/Blackshield-Company/wireclaw"
 keywords = ["http", "proxy", "debugging", "cli", "tui"]
 categories = ["command-line-utilities", "web-programming", "development-tools"]
 
@@ -20,11 +20,12 @@ clap = { version = "4", features = ["derive", "env", "color"] }
 hyper = { version = "1", features = ["client", "server", "http1", "http2"] }
 http-body-util = "0.1"
 hyper-util = { version = "0.1", features = ["client-legacy", "server", "http1", "http2", "tokio"] }
-hyper-rustls = { version = "0.27", features = ["http1", "http2", "tls12", "logging", "ring"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "tls12", "logging", "ring", "native-tokio"] }
+rustls-native-certs = "0.8"
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
 rustls-pemfile = "2"
-rcgen = { version = "0.14", features = ["x509-parser", "pem"] }
-tokio-rustls = { version = "0.26", features = ["ring"] }
+rcgen = { version = "0.14", default-features = false, features = ["x509-parser", "pem", "ring"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
@@ -70,7 +71,7 @@ tungstenite = "0.26"
 futures-util = "0.3"
 
 # Lua scripting for pre/post request hooks
-mlua = { version = "0.10", features = ["lua54", "async", "send", "serialize"] }
+mlua = { version = "0.10", features = ["lua54", "vendored", "async", "send", "serialize"] }
 
 # Web dashboard
 axum = { version = "0.8", features = ["ws"] }
@@ -84,3 +85,6 @@ hdrhistogram = "7"
 
 # JSON schema inference
 schemars = "0.8"
+
+[dev-dependencies]
+x509-parser = "0.18"
