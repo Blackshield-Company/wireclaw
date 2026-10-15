@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a problem with this tool
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Tool
+      description: Which tool is affected?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release, tag or commit you are using.
+      placeholder: e.g. v1.2.0
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant log output (Papyrus/SKSE logs, console output, crash logs).
+      render: text
