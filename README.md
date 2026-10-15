@@ -1,3 +1,5 @@
+![wireclaw](.github/preview.png)
+
 ```
  _   _   _   _   _   _   _   _  
 / \ / \ / \ / \ / \ / \ / \ / \ 
