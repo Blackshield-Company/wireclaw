@@ -8,7 +8,7 @@ use crossterm::{
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Margin},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
@@ -290,6 +290,18 @@ impl App {
 
         let request_list = self.build_request_list();
         frame.render_stateful_widget(request_list, main[0], &mut self.list_state.clone());
+        if self.filtered_exchanges.is_empty() {
+            let message = if self.search_query.is_empty() {
+                "No requests captured yet. Point a client at the proxy."
+            } else {
+                "No requests match the filter."
+            };
+            let inner = main[0].inner(Margin {
+                horizontal: 1,
+                vertical: 2,
+            });
+            frame.render_widget(knight_empty_state(message), inner);
+        }
 
         let detail = self.build_detail_view();
         frame.render_widget(detail, main[1]);
@@ -1001,11 +1013,57 @@ fn colorize_json_owned(json: String) -> Vec<Line<'static>> {
     lines
 }
 
+/// Knight A, the Blackshield Company mascot, as half-block rows: (r, g, b, row).
+const KNIGHT_ROWS: &[(u8, u8, u8, &str)] = &[
+    (193, 18, 31, "               ▄██▄"),
+    (193, 18, 31, "           ▄▄▄███ ▀"),
+    (154, 160, 168, "          ████████"),
+    (154, 160, 168, "          ▄██▄▄▄▄▄"),
+    (154, 160, 168, "     ▄██████▄███▄█████"),
+    (154, 160, 168, "     █████████████████"),
+    (154, 160, 168, "█▀▀▀▀▀▀▀▀▀██████▄▄▄▄▄▄▄▄"),
+    (154, 160, 168, "█   ███   ███████ ████"),
+    (154, 160, 168, "█ ███████ ███████ ██▀▀██▀▀"),
+    (154, 160, 168, "█ ▀▀███▀▀ █▄▄██▄▄  ▄  ██"),
+    (154, 160, 168, " ▀▄ ▀▀▀ ▄████████     ██"),
+    (154, 160, 168, "   ▀▄ ▄█▄▄▄▄▄▄▄▄▄▄▄▄  ██"),
+    (154, 160, 168, "   ▄████████████████  ██"),
+    (193, 18, 31, "   ▀   ▀▀             █▀"),
+];
+
+/// Empty-state panel: Knight A standing watch above a short message.
+fn knight_empty_state(message: &str) -> Paragraph<'static> {
+    let mut lines: Vec<Line> = KNIGHT_ROWS
+        .iter()
+        .map(|(r, g, b, row)| {
+            Line::from(Span::styled(
+                (*row).to_string(),
+                Style::default().fg(Color::Rgb(*r, *g, *b)),
+            ))
+        })
+        .collect();
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(
+        message.to_string(),
+        Style::default().fg(Color::DarkGray),
+    )));
+    Paragraph::new(Text::from(lines)).alignment(Alignment::Center)
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_knight_empty_state_rows_fit() {
+        assert!(KNIGHT_ROWS.len() <= 16);
+        for (_, _, _, row) in KNIGHT_ROWS {
+            assert!(row.chars().count() <= 32, "row too wide: {row:?}");
+        }
+        let _ = knight_empty_state("No requests captured yet.");
+    }
 
     #[test]
     fn test_colorize_json_simple() {
