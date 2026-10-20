@@ -12,7 +12,7 @@ Only the latest release receives security fixes.
 ## Reporting a vulnerability
 
 Please **do not open a public issue** for security problems. Report privately through
-[GitHub Security Advisories](https://github.com/Blackshield-Company/wireclaw/security/advisories/new).
+[GitHub Security Advisories](https://github.com/synthalorian/wireclaw/security/advisories/new).
 Include the version (`wireclaw --version`), your OS, steps to reproduce, and the impact.
 You should get an acknowledgement within 7 days. We'll agree on a disclosure date with you
 once a fix is ready.

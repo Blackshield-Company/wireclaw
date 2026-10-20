@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wireclaw installer
 #
-#   curl -fsSL https://raw.githubusercontent.com/Blackshield-Company/wireclaw/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/synthalorian/wireclaw/main/install.sh | bash
 #
 # Downloads the prebuilt release binary for your OS/arch from GitHub Releases,
 # verifies its SHA-256 checksum, and installs it to $BIN_DIR. If no prebuilt
@@ -14,7 +14,7 @@
 #   DRY_RUN=1           print what would happen without downloading/installing
 set -euo pipefail
 
-OWNER_REPO="Blackshield-Company/wireclaw"
+OWNER_REPO="synthalorian/wireclaw"
 REPO_URL="https://github.com/${OWNER_REPO}"
 VERSION="${WIRECLAW_VERSION:-latest}"
 BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
