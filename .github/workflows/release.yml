@@ -1,3 +1,14 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Release workflow (shared style, adapted from release-template.yml)
+#
+# Builds wireclaw for every supported target, verifies the archives, writes
+# SHA256SUMS and attaches everything to a DRAFT GitHub release. It never
+# publishes a release and never creates tags — a human reviews the draft and
+# publishes it.
+#
+# install.sh downloads from releases/latest (or a given tag), so a release is
+# only visible to `install.sh` (default) once it has been published.
+# ──────────────────────────────────────────────────────────────────────────────
 name: Release
 
 on:
@@ -6,91 +17,189 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to (re)build
+        description: 'Existing tag to (re)build and attach assets for (e.g. v1.2.3)'
         required: true
+        type: string
 
 permissions:
   contents: write
 
+# One release run per tag at a time; never cancel a half-uploaded release.
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
-  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # Tag being released: the pushed tag, or the dispatch input.
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TAG }}
-      - name: Create release if missing
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if ! gh release view "$TAG" > /dev/null 2>&1; then
-            notes=$(awk -v v="${TAG#v}" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md)
-            gh release create "$TAG" --title "wireclaw $TAG" --notes "${notes:-Release $TAG}" --verify-tag
-          fi
+  # ADAPTED: no separate gates job; ci.yml already runs fmt/clippy/tests on
+  # main and PRs, as before.
 
   build:
-    needs: create-release
-    name: build ${{ matrix.target }}
+    name: Build (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
+        # ADAPTED: one entry per Rust target (same targets/runners as before).
         include:
-          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
-          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
-          - { target: x86_64-apple-darwin, os: macos-latest }
-          - { target: aarch64-apple-darwin, os: macos-latest }
-          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+          - { name: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
+          - { name: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
+          - { name: x86_64-apple-darwin, os: macos-latest }
+          - { name: aarch64-apple-darwin, os: macos-latest }
+          - { name: x86_64-pc-windows-msvc, os: windows-latest }
     runs-on: ${{ matrix.os }}
+
     steps:
+      - name: Validate tag
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9A-Za-z._+-]+$ ]]; then
+            echo "::error::Invalid release tag: '$RELEASE_TAG'"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+
+      # ADAPTED: Rust toolchain + cargo build for the matrix target.
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.name }}
+
       - name: Build
-        run: cargo build --release --locked --target ${{ matrix.target }}
-      # Archive names must match install.sh: wireclaw-<target>.tar.gz / .zip
-      - name: Package (unix)
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.name }}
+
+      # ADAPTED: archive names must match install.sh:
+      #   wireclaw-<target>.tar.gz (unix) / wireclaw-<target>.zip (windows)
+      # each with a per-file <archive>.sha256. Archive layout is unchanged:
+      # a top-level wireclaw-<target>/ dir with the binary, README, LICENSE,
+      # CHANGELOG.
+      - name: Stage assets (unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          name="wireclaw-${{ matrix.target }}"
-          mkdir -p "dist/$name"
-          cp "target/${{ matrix.target }}/release/wireclaw" README.md LICENSE CHANGELOG.md "dist/$name/"
-          tar -C dist -czf "$name.tar.gz" "$name"
-          shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
-          echo "ASSETS=$name.tar.gz $name.tar.gz.sha256" >> "$GITHUB_ENV"
-      - name: Package (windows)
+          name="wireclaw-${{ matrix.name }}"
+          mkdir -p "pkg/$name" dist
+          cp "target/${{ matrix.name }}/release/wireclaw" README.md LICENSE CHANGELOG.md "pkg/$name/"
+          tar -C pkg -czf "dist/$name.tar.gz" "$name"
+          (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
+          ls -la dist
+
+      - name: Stage assets (windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          name="wireclaw-${{ matrix.target }}"
-          mkdir -p "dist/$name"
-          cp "target/${{ matrix.target }}/release/wireclaw.exe" README.md LICENSE CHANGELOG.md "dist/$name/"
-          (cd dist && 7z a -tzip "../$name.zip" "$name" > /dev/null)
-          sha256sum "$name.zip" > "$name.zip.sha256"
-          echo "ASSETS=$name.zip $name.zip.sha256" >> "$GITHUB_ENV"
-      - name: Upload to release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" $ASSETS --clobber
+          name="wireclaw-${{ matrix.name }}"
+          mkdir -p "pkg/$name" dist
+          cp "target/${{ matrix.name }}/release/wireclaw.exe" README.md LICENSE CHANGELOG.md "pkg/$name/"
+          (cd pkg && 7z a -tzip "../dist/$name.zip" "$name" > /dev/null)
+          (cd dist && sha256sum "$name.zip" > "$name.zip.sha256")
+          ls -la dist
 
-  checksums:
-    needs: build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub release
+    needs: [build]
     runs-on: ubuntu-latest
+
     steps:
-      - name: Aggregate SHA256SUMS
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # ADAPTED: checkout needed for CHANGELOG.md release notes.
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Verify expected assets
+        shell: bash
+        working-directory: dist
         run: |
-          mkdir sums && cd sums
-          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.sha256'
-          cat *.sha256 | sed 's/ \*/  /' | sort -k2 > SHA256SUMS
+          shopt -s nullglob
+          # ADAPTED: every archive install.sh can request, plus its .sha256.
+          targets=(
+            x86_64-unknown-linux-gnu
+            aarch64-unknown-linux-gnu
+            x86_64-apple-darwin
+            aarch64-apple-darwin
+            x86_64-pc-windows-msvc
+          )
+          expected=()
+          for t in "${targets[@]}"; do
+            case "$t" in
+              *windows*) a="wireclaw-$t.zip" ;;
+              *) a="wireclaw-$t.tar.gz" ;;
+            esac
+            expected+=("$a" "$a.sha256")
+          done
+          # ADAPTED: exact names, not globs (a literal name with no glob
+          # characters would always "match" itself), so test for the file.
+          missing=0
+          for asset in "${expected[@]}"; do
+            if [ ! -s "$asset" ]; then
+              echo "::error::Missing expected asset: $asset"
+              missing=1
+            else
+              printf 'ok  %s\n' "$asset"
+            fi
+          done
+          ls -la
+          exit "$missing"
+
+      # ADAPTED: SHA256SUMS covers the archives only (as before, not the
+      # per-file .sha256 files); the per-file .sha256 files are checked too.
+      - name: Generate and verify SHA256SUMS
+        shell: bash
+        working-directory: dist
+        run: |
+          rm -f SHA256SUMS
+          find . -maxdepth 1 -type f ! -name SHA256SUMS ! -name '*.sha256' -printf '%f\n' | LC_ALL=C sort \
+            | xargs -r -d '\n' sha256sum > SHA256SUMS
           cat SHA256SUMS
-          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" SHA256SUMS --clobber
+          sha256sum -c SHA256SUMS
+          for f in *.sha256; do
+            sha256sum -c "$f"
+          done
+
+      - name: Attach assets to draft release
+        shell: bash
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            if [ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "::error::Release $RELEASE_TAG is already published; refusing to replace its assets."
+              exit 1
+            fi
+            echo "Draft release $RELEASE_TAG exists; uploading assets (clobber)."
+            gh release upload "$RELEASE_TAG" ./* --clobber
+          else
+            echo "Creating draft release $RELEASE_TAG."
+            # ADAPTED: notes are this version's section of CHANGELOG.md, title
+            # "wireclaw <tag>" (same as the previous release workflow).
+            notes=$(awk -v v="${RELEASE_TAG#v}" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^## \[/ {f=0} f' ../CHANGELOG.md)
+            notes_file="$RUNNER_TEMP/release-notes.md"
+            printf '%s\n' "${notes:-Release $RELEASE_TAG}" > "$notes_file"
+            gh release create "$RELEASE_TAG" ./* \
+              --draft \
+              --verify-tag \
+              --title "wireclaw $RELEASE_TAG" \
+              --notes-file "$notes_file"
+          fi
