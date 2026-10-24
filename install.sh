@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wireclaw installer
 #
-#   curl -fsSL https://raw.githubusercontent.com/synthalorian/wireclaw/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Blackshield-Company/wireclaw/main/install.sh | bash
 #
 # Downloads the prebuilt release binary for your OS/arch from GitHub Releases,
 # verifies its SHA-256 checksum, and installs it to $BIN_DIR. If no prebuilt

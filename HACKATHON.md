@@ -80,7 +80,7 @@ wireclaw capture --session demo --dashboard
 # Make some API calls
 export HTTP_PROXY=http://localhost:8080
 curl https://api.github.com/users/synthalorian
-curl https://api.github.com/repos/synthalorian/wireclaw
+curl https://api.github.com/repos/Blackshield-Company/wireclaw
 
 # Browser: http://localhost:8746
 # → Watch real-time traffic flowing in
