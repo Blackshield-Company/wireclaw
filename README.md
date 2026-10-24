@@ -53,11 +53,11 @@ Point your HTTP client at the proxy. Ship your code. Browse the dashboard. Expor
 
 ```bash
 # Linux / macOS (x86_64 and arm64): verifies the SHA-256 checksum
-curl -fsSL https://raw.githubusercontent.com/synthalorian/wireclaw/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Blackshield-Company/wireclaw/main/install.sh | bash
 ```
 
 Or download an archive for your platform from
-[Releases](https://github.com/synthalorian/wireclaw/releases) (Linux x86_64/aarch64,
+[Releases](https://github.com/Blackshield-Company/wireclaw/releases) (Linux x86_64/aarch64,
 macOS x86_64/arm64, Windows x86_64) and check it against `SHA256SUMS`:
 
 ```bash
@@ -67,7 +67,7 @@ sha256sum -c SHA256SUMS --ignore-missing   # macOS: shasum -a 256 -c SHA256SUMS 
 ### Install from Source
 
 ```bash
-git clone https://github.com/synthalorian/wireclaw.git
+git clone https://github.com/Blackshield-Company/wireclaw.git
 cd wireclaw
 cargo install --path .
 ```

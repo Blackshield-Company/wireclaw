@@ -5,7 +5,7 @@ Thanks for your interest in contributing! Here's how to get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/synthalorian/wireclaw.git
+git clone https://github.com/Blackshield-Company/wireclaw.git
 cd wireclaw
 cargo build
 cargo test

@@ -4,7 +4,7 @@ version = "1.1.0"
 edition = "2024"
 description = "Local HTTP proxy that captures, stores, replays, and inspects API traffic — terminal-native and zero-config"
 license = "Apache-2.0"
-repository = "https://github.com/synthalorian/wireclaw"
+repository = "https://github.com/Blackshield-Company/wireclaw"
 keywords = ["http", "proxy", "debugging", "cli", "tui"]
 categories = ["command-line-utilities", "web-programming", "development-tools"]
 
