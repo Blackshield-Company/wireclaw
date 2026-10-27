@@ -31,7 +31,7 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 tokio = { version = "1", features = ["full"] }
 
 # Terminal UI
-ratatui = "0.29"
+ratatui = "0.30"
 crossterm = "0.28"
 
 # Serialization
