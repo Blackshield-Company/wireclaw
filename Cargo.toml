@@ -71,7 +71,7 @@ tungstenite = "0.26"
 futures-util = "0.3"
 
 # Lua scripting for pre/post request hooks
-mlua = { version = "0.10", features = ["lua54", "vendored", "async", "send", "serialize"] }
+mlua = { version = "0.12", features = ["lua54", "vendored", "async", "send", "serialize"] }
 
 # Web dashboard
 axum = { version = "0.8", features = ["ws"] }
