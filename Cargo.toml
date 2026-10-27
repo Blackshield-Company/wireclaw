@@ -84,7 +84,7 @@ indexmap = "2"
 hdrhistogram = "7"
 
 # JSON schema inference
-schemars = "0.8"
+schemars = "1.2"
 
 [dev-dependencies]
 x509-parser = "0.18"
