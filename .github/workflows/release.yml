@@ -61,7 +61,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ env.RELEASE_TAG }}
 
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       # ADAPTED: checkout needed for CHANGELOG.md release notes.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ env.RELEASE_TAG }}
 
