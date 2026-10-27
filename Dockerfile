@@ -2,7 +2,7 @@
 # Multi-stage build: compile in Rust builder, copy binary to distroless runtime
 
 # ── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM rust:1.88-alpine AS builder
+FROM rust:1.99-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig lua5.4-dev lua5.4-libs
