@@ -75,7 +75,7 @@ mlua = { version = "0.10", features = ["lua54", "vendored", "async", "send", "se
 
 # Web dashboard
 axum = { version = "0.8", features = ["ws"] }
-tower-http = { version = "0.6", features = ["fs", "cors"] }
+tower-http = { version = "0.7", features = ["fs", "cors"] }
 
 # OpenAPI generation helpers
 indexmap = "2"
